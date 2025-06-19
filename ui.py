@@ -173,6 +173,20 @@ class Dialog:
         self.cancel_button.rect.bottomright = (self.ok_button.rect.left - 10, self.rect.bottom - 20)
         for btn in self.buttons:
             btn.draw(screen)
+        if self.auto_in_btn:
+            txt = "ON" if self.state.auto_inbound else "OFF"
+            surf = self.font.render(txt, True, (255, 255, 255))
+            screen.blit(surf, (self.auto_in_btn.rect.right + 6, self.auto_in_btn.rect.y + 8))
+        if self.auto_out_btn:
+            txt = "ON" if self.state.auto_outbound else "OFF"
+            surf = self.font.render(txt, True, (255, 255, 255))
+            screen.blit(surf, (self.auto_out_btn.rect.right + 6, self.auto_out_btn.rect.y + 8))
+        if self.auto_out_btn:
+            count = f"In:{self.state.auto_in_count} Out:{self.state.auto_out_count}"
+            surf = self.font.render(count, True, (255, 255, 255))
+            screen.blit(surf, (self.auto_out_btn.rect.x, self.auto_out_btn.rect.bottom + 10))
+
+
 
     # Dialog owner checks this to know if closed
     @property
@@ -238,6 +252,8 @@ class UI:
         self.help_overlay = HelpOverlay(self.large_font)
         # Buttons (Help, +Bot, -Bot)
         self.buttons: List[Button] = []
+        self.auto_in_btn = None
+        self.auto_out_btn = None
         self._build_buttons()
         # Dialogs
         self.active_dialog: Optional[Dialog] = None
@@ -248,6 +264,7 @@ class UI:
     # Buttons construction
     def _build_buttons(self):
         button_w, button_h = 80, 30
+        self.button_h = button_h
         # Place buttons at right panel region (grid width * spacing + margin)
         panel_x = self.grid.width * config.CELL_SPACING + 20
         y = 20
@@ -262,7 +279,22 @@ class UI:
         # Remove bot
         rm_btn_rect = pygame.Rect(panel_x, y, button_w, button_h)
         rm_bot_btn = Button(rm_btn_rect, "- Bot", self._on_remove_bot, font=self.font)
-        self.buttons = [help_btn, add_bot_btn, rm_bot_btn]
+        y += button_h + 10
+        # Auto inbound toggle
+        auto_in_rect = pygame.Rect(panel_x, y, button_w, button_h)
+        auto_in_btn = Button(auto_in_rect, "Auto In", self._on_auto_inbound_toggle, font=self.font)
+        y += button_h + 10
+        # Auto outbound toggle
+        auto_out_rect = pygame.Rect(panel_x, y, button_w, button_h)
+        auto_out_btn = Button(auto_out_rect, "Auto Out", self._on_auto_outbound_toggle, font=self.font)
+        y += button_h + 10
+        # Manual outbound request
+        out_req_rect = pygame.Rect(panel_x, y, button_w, button_h)
+        out_req_btn = Button(out_req_rect, "Request", self._open_outbound_dialog, font=self.font)
+
+        self.auto_in_btn = auto_in_btn
+        self.auto_out_btn = auto_out_btn
+        self.buttons = [help_btn, add_bot_btn, rm_bot_btn, auto_in_btn, auto_out_btn, out_req_btn]
 
     # Callback implementations
     def _on_add_bot(self):
@@ -270,6 +302,12 @@ class UI:
 
     def _on_remove_bot(self):
         self.state.request_remove_bot = True
+
+    def _on_auto_inbound_toggle(self):
+        self.state.auto_inbound = not self.state.auto_inbound
+
+    def _on_auto_outbound_toggle(self):
+        self.state.auto_outbound = not self.state.auto_outbound
 
     # ------------------------------------------------------------------
     # Event handling
@@ -377,6 +415,18 @@ class UI:
         # Draw side buttons
         for btn in self.buttons:
             btn.draw(screen)
+        if self.auto_in_btn:
+            txt = "ON" if self.state.auto_inbound else "OFF"
+            surf = self.font.render(txt, True, (255, 255, 255))
+            screen.blit(surf, (self.auto_in_btn.rect.right + 6, self.auto_in_btn.rect.y + 8))
+        if self.auto_out_btn:
+            txt = "ON" if self.state.auto_outbound else "OFF"
+            surf = self.font.render(txt, True, (255, 255, 255))
+            screen.blit(surf, (self.auto_out_btn.rect.right + 6, self.auto_out_btn.rect.y + 8))
+        if self.auto_out_btn:
+            count = f"In:{self.state.auto_in_count} Out:{self.state.auto_out_count}"
+            surf = self.font.render(count, True, (255, 255, 255))
+            screen.blit(surf, (self.auto_out_btn.rect.x, self.auto_out_btn.rect.bottom + 10))
 
         # Draw help overlay (may cover whole screen)
         self.help_overlay.draw(screen)
@@ -400,7 +450,8 @@ class UI:
             bottom_items = []
         # Panel origin (right side)
         panel_x = self.grid.width * config.CELL_SPACING + 20
-        panel_y = 200
+        button_area = 20 + len(self.buttons) * (self.button_h + 10)
+        panel_y = button_area + 20
         size = 18
         for i, item in enumerate(top_items):
             colour = self._pref_to_colour(item.preference)

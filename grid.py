@@ -31,13 +31,17 @@ class Grid:
             return self.cells[x][y]
         return None
 
-    def find_empty_storage_cell(self) -> Optional[Cell]:
-        """Return first storage cell with spare capacity or None."""
+    def find_empty_storage_cell(self, exclude: Optional[set[Cell]] = None) -> Optional[Cell]:
+        """Return a random storage cell with spare capacity, excluding any provided."""
+        import random
+        if exclude is None:
+            exclude = set()
+        candidates: list[Cell] = []
         for col in self.cells:
             for cell in col:
-                if cell.type == "storage" and len(cell.items) < config.MAX_ITEMS_PER_CELL:
-                    return cell
-        return None
+                if cell.type == "storage" and len(cell.items) < config.MAX_ITEMS_PER_CELL and cell not in exclude:
+                    candidates.append(cell)
+        return random.choice(candidates) if candidates else None
 
     def find_item(self, code: str) -> Tuple[Optional[Cell], Optional[object]]:
         """Locate an item by code; search storage+inbound."""

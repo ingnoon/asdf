@@ -16,18 +16,20 @@ class Bot:
         self.grid = grid
         self.goal_coords = None  # remember goal to allow re‑planning
         self.target_path = []    # list of grid coordinates (x,y) to follow, not including current position
-        self.current_task = None # can be "pickup", "delivery", "resort", or None
-        self.source_cell = None  # cell from which to pick up an item (for pickup tasks)
-        self.dest_cell = None    # cell to drop off an item (for delivery tasks)
+        self.current_task = None  # can be "pickup", "delivery", "resort", or None
+        self.source_cell = None   # cell from which to pick up an item (for pickup tasks)
+        self.dest_cell = None     # cell to drop off an item (for delivery tasks)
+        self.target_item_code = None  # desired item code for pickup tasks
         self.carrying_item = None # the Item currently being carried (if any)
         self.speed = 0.0        # current speed in cells per second (will accelerate/decelerate)
         self.show_path = True   # whether to display this bot's planned path in UI (user toggleable)
     
-    def set_task_pickup(self, source: Cell, dest: Cell):
+    def set_task_pickup(self, source: Cell, dest: Cell, item_code: str | None = None):
         """Assign a task to pick an item from source cell and deliver it to dest cell."""
         self.current_task = "delivery"
         self.source_cell = source
         self.dest_cell = dest
+        self.target_item_code = item_code
         self.carrying_item = None  # not carrying anything yet
         # Compute path to source location
         self._compute_path_to((source.x, source.y))
@@ -43,24 +45,22 @@ class Bot:
     
     def _compute_path_to(self, target_coords):
         """Helper to compute an A* path from current position to target (coordinates in grid)."""
-        start = (round(self.pos[0]), round(self.pos[1]))  # current grid cell (rounded in case bot is mid-cell)
+        self.goal_coords = target_coords
+        start = (round(self.pos[0]), round(self.pos[1]))  # current grid cell (rounded if between cells)
         goal = target_coords
-        blocked = { (round(b.pos[0]), round(b.pos[1]))
-                   for b in self.grid.bots if b is not self}
-        # Call A* pathfinding, considering dynamic obstacles (other bots can be passed in if needed)
-        # For simplicity, we won't pass other bots as static obstacles here; collision avoidance is handled separately.
+        # Build blocked set using other bots' current (rounded) locations
         blocked = {(round(b.pos[0]), round(b.pos[1])) for b in self.grid.bots if b is not self}
         blocked.discard(target_coords)
-        blocked.update({b.target_path[0]                           # 다음 칸
-                        for b in self.grid.bots
-                        if b is not self and b.target_path})
+        blocked.update({b.target_path[0] for b in self.grid.bots if b is not self and b.target_path})
         path = find_path(start, goal, blocked)   # 현재 봇을 제외한 칸은 벽으로 간주
 
         if path is None:
             self.target_path = []
         else:
-            # The path returned includes the start and goal; we can remove the first element (which is the start).
-            if path and path[0] == start:
+            # Remove the start cell only if we're already exactly at its center
+            at_center = (abs(self.pos[0] - start[0]) < 1e-6 and
+                         abs(self.pos[1] - start[1]) < 1e-6)
+            if path and path[0] == start and at_center:
                 path = path[1:]
             self.target_path = path
     
@@ -79,7 +79,9 @@ class Bot:
             return  # 경로 없음
         
         next_step = self.target_path[0]
-        occupied = {b.pos for b in self.grid.bots if b is not self}
+        occupied = {(round(b.pos[0]), round(b.pos[1]))
+                    for b in self.grid.bots
+                    if b is not self}
         if next_step in occupied:
             if next_step == self.goal_coords:
             # 목적지 자체가 막혀 있으면: 한 틱 기다리기
@@ -141,32 +143,56 @@ class Bot:
         if self.current_task == "delivery":
             if self.carrying_item is None and self.source_cell is not None:
                 # Arrived at source location: pick up item
-                picked_item = grid.get_cell(self.source_cell.x, self.source_cell.y).remove_item()
-                if picked_item:
-                    self.carrying_item = picked_item
+                cell = grid.get_cell(self.source_cell.x, self.source_cell.y)
+                if cell:
+                    if self.target_item_code:
+                        while cell.items and cell.items[0].code != self.target_item_code:
+                            temp = grid.find_empty_storage_cell({cell})
+                            if temp is None:
+                                break
+                            temp.add_item(cell.remove_item())
+                    picked_item = cell.remove_item()
+                    if picked_item:
+                        self.carrying_item = picked_item
                 # Now plan path to destination to drop off
                 if self.dest_cell:
                     self._compute_path_to((self.dest_cell.x, self.dest_cell.y))
-                    # After picking up, continue to move (target_path now set to dest)
                     return
             if self.carrying_item is not None and self.dest_cell is not None:
                 # Arrived at destination with an item: drop it off
                 grid.get_cell(self.dest_cell.x, self.dest_cell.y).add_item(self.carrying_item)
                 # If destination was an outbound cell, the item is considered dispatched (now in outbound stack)
                 self.carrying_item = None
+                self.target_item_code = None
                 # Task complete
                 self.current_task = None
                 self.source_cell = None
                 self.dest_cell = None
+                self.goal_coords = None
                 # After completing a delivery, the bot will soon be marked idle (and can be sent to rest or get new task)
         elif self.current_task == "resort":
             if self.source_cell is not None:
                 # Arrived at the cell that needs re-sorting
                 cell = grid.get_cell(self.source_cell.x, self.source_cell.y)
-                cell.sort_items_by_preference()  # resort items in-place
+                if cell:
+                    temp_cells = []
+                    while cell.items:
+                        tcell = grid.find_empty_storage_cell(set(temp_cells) | {cell})
+                        if tcell is None:
+                            break
+                        tcell.add_item(cell.remove_item())
+                        temp_cells.append(tcell)
+                    all_items = []
+                    for t in temp_cells:
+                        all_items.extend(t.items)
+                        t.items = []
+                    sorted_items = sorted(all_items, key=lambda it: it.preference, reverse=True)
+                    for it in sorted_items:
+                        cell.add_item(it)
                 # Task complete
                 self.current_task = None
                 self.source_cell = None
                 self.dest_cell = None
+                self.goal_coords = None
                 # Bot didn't carry anything; it was just reordering at location.
         # When this method finishes, the bot will effectively be idle (no current task, no path).
