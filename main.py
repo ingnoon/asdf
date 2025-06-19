@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import pygame
+import random
 from typing import List, Tuple, Optional, cast
 
 import config
@@ -37,6 +38,8 @@ def main() -> None:
 
     clock = pygame.time.Clock()
     pref_timer = 0.0
+    auto_in_timer = 0.0
+    auto_out_timer = 0.0
     running = True
 
     while running:
@@ -60,11 +63,28 @@ def main() -> None:
                 ui.bots = bots
 
         # inbound quick‑demo
+                # inbound quick‑demo
         if state.awaiting_inbound_input is not None:
             in_c = state.awaiting_inbound_input
             in_c.add_item(Item(f"ITEM{pygame.time.get_ticks() % 1000:03}"))
             state.awaiting_inbound_input = None
 
+        # automatic inbound/outbound generation
+        auto_in_timer += dt
+        auto_out_timer += dt
+        if state.auto_inbound and auto_in_timer >= 1.0:
+            auto_in_timer = 0.0
+            y_idx = random.randint(0, config.INBOUND_CELLS - 1)
+            c = grid.get_cell(0, y_idx)
+            if c:
+                c.add_item(Item(f"ITEM{random.randint(0,999):03}"))
+        if state.auto_outbound and auto_out_timer >= 1.0:
+            auto_out_timer = 0.0
+            codes = [it.code for col in grid.cells for cell in col
+                     if cell.type in ("storage", "inbound") for it in cell.items]
+            if codes:
+                state.manual_requests.append((random.choice(codes), 1))
+                state.auto_mode = False
         # preference update
         pref_timer += dt
         pref_updated = False

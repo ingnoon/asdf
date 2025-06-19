@@ -43,24 +43,22 @@ class Bot:
     
     def _compute_path_to(self, target_coords):
         """Helper to compute an A* path from current position to target (coordinates in grid)."""
-        start = (round(self.pos[0]), round(self.pos[1]))  # current grid cell (rounded in case bot is mid-cell)
+        self.goal_coords = target_coords
+        start = (round(self.pos[0]), round(self.pos[1]))  # current grid cell (rounded if between cells)
         goal = target_coords
-        blocked = { (round(b.pos[0]), round(b.pos[1]))
-                   for b in self.grid.bots if b is not self}
-        # Call A* pathfinding, considering dynamic obstacles (other bots can be passed in if needed)
-        # For simplicity, we won't pass other bots as static obstacles here; collision avoidance is handled separately.
+        # Build blocked set using other bots' current (rounded) locations
         blocked = {(round(b.pos[0]), round(b.pos[1])) for b in self.grid.bots if b is not self}
         blocked.discard(target_coords)
-        blocked.update({b.target_path[0]                           # 다음 칸
-                        for b in self.grid.bots
-                        if b is not self and b.target_path})
+        blocked.update({b.target_path[0] for b in self.grid.bots if b is not self and b.target_path})
         path = find_path(start, goal, blocked)   # 현재 봇을 제외한 칸은 벽으로 간주
-
         if path is None:
             self.target_path = []
         else:
             # The path returned includes the start and goal; we can remove the first element (which is the start).
-            if path and path[0] == start:
+            # Remove the start cell only if we're already exactly at its center
+            at_center = (abs(self.pos[0] - start[0]) < 1e-6 and
+                         abs(self.pos[1] - start[1]) < 1e-6)
+            if path and path[0] == start and at_center:
                 path = path[1:]
             self.target_path = path
     
@@ -79,7 +77,9 @@ class Bot:
             return  # 경로 없음
         
         next_step = self.target_path[0]
-        occupied = {b.pos for b in self.grid.bots if b is not self}
+        occupied = {(round(b.pos[0]), round(b.pos[1]))
+                for b in self.grid.bots
+                if b is not self}
         if next_step in occupied:
             if next_step == self.goal_coords:
             # 목적지 자체가 막혀 있으면: 한 틱 기다리기
@@ -158,7 +158,7 @@ class Bot:
                 self.current_task = None
                 self.source_cell = None
                 self.dest_cell = None
-                # After completing a delivery, the bot will soon be marked idle (and can be sent to rest or get new task)
+                self.goal_coords = None
         elif self.current_task == "resort":
             if self.source_cell is not None:
                 # Arrived at the cell that needs re-sorting
@@ -168,5 +168,6 @@ class Bot:
                 self.current_task = None
                 self.source_cell = None
                 self.dest_cell = None
+                self.goal_coords = None
                 # Bot didn't carry anything; it was just reordering at location.
         # When this method finishes, the bot will effectively be idle (no current task, no path).

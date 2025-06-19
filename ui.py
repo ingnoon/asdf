@@ -262,7 +262,15 @@ class UI:
         # Remove bot
         rm_btn_rect = pygame.Rect(panel_x, y, button_w, button_h)
         rm_bot_btn = Button(rm_btn_rect, "- Bot", self._on_remove_bot, font=self.font)
-        self.buttons = [help_btn, add_bot_btn, rm_bot_btn]
+        y += button_h + 10
+        # Auto inbound toggle
+        auto_in_rect = pygame.Rect(panel_x, y, button_w, button_h)
+        auto_in_btn = Button(auto_in_rect, "Auto In", self._on_auto_inbound_toggle, font=self.font)
+        y += button_h + 10
+        # Auto outbound toggle
+        auto_out_rect = pygame.Rect(panel_x, y, button_w, button_h)
+        auto_out_btn = Button(auto_out_rect, "Auto Out", self._on_auto_outbound_toggle, font=self.font)
+        self.buttons = [help_btn, add_bot_btn, rm_bot_btn, auto_in_btn, auto_out_btn]
 
     # Callback implementations
     def _on_add_bot(self):
@@ -270,6 +278,12 @@ class UI:
 
     def _on_remove_bot(self):
         self.state.request_remove_bot = True
+
+    def _on_auto_inbound_toggle(self):
+        self.state.auto_inbound = not self.state.auto_inbound
+
+    def _on_auto_outbound_toggle(self):
+        self.state.auto_outbound = not self.state.auto_outbound
 
     # ------------------------------------------------------------------
     # Event handling

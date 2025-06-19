@@ -1,6 +1,8 @@
 class SimulationState:
     # 모드/플래그
     auto_mode = True
+    auto_inbound = False
+    auto_outbound = False
     awaiting_inbound_input = None
     request_add_bot = False
     request_remove_bot = False
