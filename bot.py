@@ -83,20 +83,21 @@ class Bot:
         # ---------- BEGIN PATCH: dynamic collision avoid ----------
         if not self.target_path:
             return  # 경로 없음
-        
+
         next_step = self.target_path[0]
         occupied = {(round(b.pos[0]), round(b.pos[1]))
                     for b in self.grid.bots
                     if b is not self}
         if next_step in occupied:
             if next_step == self.goal_coords:
-            # 목적지 자체가 막혀 있으면: 한 틱 기다리기
-                    return
+                # 목적지 자체가 막혀 있으면 한 틱 기다리기
+                return
             else:
-            # 경로 중간이 막히면: 즉시 재계산
+                # 경로 중간이 막히면 즉시 재계산
                 self._compute_path_to(self.goal_coords)
-            return
-        next_step = self.target_path[0]                   # 새 경로 첫 칸
+                if not self.target_path:
+                    return
+                next_step = self.target_path[0]
         # ----------- END PATCH ------------------------------
         
         
