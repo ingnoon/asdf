@@ -173,18 +173,6 @@ class Dialog:
         self.cancel_button.rect.bottomright = (self.ok_button.rect.left - 10, self.rect.bottom - 20)
         for btn in self.buttons:
             btn.draw(screen)
-        if self.auto_in_btn:
-            txt = "ON" if self.state.auto_inbound else "OFF"
-            surf = self.font.render(txt, True, (255, 255, 255))
-            screen.blit(surf, (self.auto_in_btn.rect.right + 6, self.auto_in_btn.rect.y + 8))
-        if self.auto_out_btn:
-            txt = "ON" if self.state.auto_outbound else "OFF"
-            surf = self.font.render(txt, True, (255, 255, 255))
-            screen.blit(surf, (self.auto_out_btn.rect.right + 6, self.auto_out_btn.rect.y + 8))
-        if self.auto_out_btn:
-            count = f"In:{self.state.auto_in_count} Out:{self.state.auto_out_count}"
-            surf = self.font.render(count, True, (255, 255, 255))
-            screen.blit(surf, (self.auto_out_btn.rect.x, self.auto_out_btn.rect.bottom + 10))
 
 
 
