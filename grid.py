@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Optional, Tuple
 import config
 from cell import Cell
+from item import Item
 
 class Grid:
     def __init__(self, width: Optional[int] = None, height: Optional[int] = None):
@@ -52,3 +53,15 @@ class Grid:
                         if item.code == code:
                             return cell, item
         return None, None
+
+    def populate_random_items(self, max_per_cell: int = 5) -> None:
+        """Fill storage cells with a random number of random items."""
+        import random
+        for col in self.cells:
+            for cell in col:
+                if cell.type != "storage":
+                    continue
+                qty = random.randint(0, max_per_cell)
+                for _ in range(qty):
+                    code = f"ITEM{random.randint(0, 999):03}"
+                    cell.add_item(Item(code))
