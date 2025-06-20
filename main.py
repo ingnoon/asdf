@@ -32,7 +32,8 @@ def main() -> None:
     bots: List[Bot] = []
     grid.bots = bots  # type: ignore[attr-defined]
     first_cell = _require_cell(grid.get_cell(0, config.INBOUND_CELLS) or grid.get_cell(0, 0))
-    bots.append(Bot("a", first_cell, grid))            # ← pass grid
+    colour = config.PATH_COLORS[0 % len(config.PATH_COLORS)]
+    bots.append(Bot("a", first_cell, grid, color=colour))
 
     ui = UI(grid, bots, state)
 
@@ -54,7 +55,8 @@ def main() -> None:
             state.request_add_bot = False
             new_id = "a" if not bots else chr(ord(bots[-1].bot_id) + 1)
             rest_cell = _require_cell(grid.get_cell(0, config.GRID_HEIGHT - 1) or grid.get_cell(0, 0))
-            bots.append(Bot(new_id, rest_cell, grid))   # ← pass grid
+            colour = config.PATH_COLORS[len(bots) % len(config.PATH_COLORS)]
+            bots.append(Bot(new_id, rest_cell, grid, color=colour))
             ui.bots = bots
         if state.request_remove_bot:
             state.request_remove_bot = False
@@ -80,10 +82,16 @@ def main() -> None:
                 state.auto_in_count += 1
         if state.auto_outbound and auto_out_timer >= 1.0:
             auto_out_timer = 0.0
-            codes = [it.code for col in grid.cells for cell in col
-                     if cell.type in ("storage", "inbound") for it in cell.items]
-            if codes:
-                state.manual_requests.append((random.choice(codes), 1))
+            best_pref, best_code = -1, None
+            for col in grid.cells:
+                for cell in col:
+                    if cell.type in ("storage", "inbound"):
+                        for it in cell.items:
+                            if it.preference > best_pref:
+                                best_pref = it.preference
+                                best_code = it.code
+            if best_code:
+                state.manual_requests.append((best_code, 1))
                 state.auto_mode = False
                 state.auto_out_count += 1
 

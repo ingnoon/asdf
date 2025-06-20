@@ -398,7 +398,7 @@ class UI:
                 for px, py in bot.target_path:
                     pts.append((px * config.CELL_SPACING + config.CELL_SIZE // 2,
                                  py * config.CELL_SPACING + config.CELL_SIZE // 2))
-                pygame.draw.lines(screen, config.PATH_COLOR, False, pts, 2)
+                pygame.draw.lines(screen, bot.path_color, False, pts, 2)
 
         # Draw side buttons
         for btn in self.buttons:

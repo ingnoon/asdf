@@ -8,7 +8,7 @@ from pathfinder import find_path
 from cell import Cell, Item
 
 class Bot:
-    def __init__(self, bot_id: str, start_cell: Cell, grid):
+    def __init__(self, bot_id: str, start_cell: Cell, grid, *, color):
         """Initialize a Bot with an ID (e.g., 'a', 'b', 'c', ...) at a starting cell position."""
         self.bot_id = bot_id
         # Position in continuous (x, y) grid coordinates (not pixels, but in cell units for easier path calculations).
@@ -23,6 +23,7 @@ class Bot:
         self.carrying_item = None # the Item currently being carried (if any)
         self.speed = 0.0        # current speed in cells per second (will accelerate/decelerate)
         self.show_path = True   # whether to display this bot's planned path in UI (user toggleable)
+        self.path_color = color
     
     def set_task_pickup(self, source: Cell, dest: Cell, item_code: str | None = None):
         """Assign a task to pick an item from source cell and deliver it to dest cell."""
@@ -51,8 +52,13 @@ class Bot:
         # Build blocked set using other bots' current (rounded) locations
         blocked = {(round(b.pos[0]), round(b.pos[1])) for b in self.grid.bots if b is not self}
         blocked.discard(target_coords)
-        blocked.update({b.target_path[0] for b in self.grid.bots if b is not self and b.target_path})
-        path = find_path(start, goal, blocked)   # 현재 봇을 제외한 칸은 벽으로 간주
+        # Also block the immediate next cell of other bots to reduce collisions
+        blocked_with_paths = set(blocked)
+        blocked_with_paths.update({b.target_path[0] for b in self.grid.bots if b is not self and b.target_path})
+        path = find_path(start, goal, blocked_with_paths)
+        if path is None:
+            # Try again ignoring future steps in case no path found
+            path = find_path(start, goal, blocked)
 
         if path is None:
             self.target_path = []

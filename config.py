@@ -28,6 +28,16 @@ BACKGROUND_COLOR = (30, 30, 30)    # dark background for the grid
 CELL_COLOR = (80, 80, 80)          # base color for empty storage cells
 INBOUND_COLOR = (80, 120, 180)     # color for inbound cells (e.g., bluish)
 OUTBOUND_COLOR = (180, 120, 80)    # color for outbound cells (e.g., brownish)
+# Base colors
 BOT_COLOR = (255, 255, 0)          # yellow color for bots (will be drawn with transparency)
-PATH_COLOR = (0, 255, 0)           # green color to draw path lines if toggled
+PATH_COLOR = (0, 255, 0)           # default path colour
+# Palette of path colours used to distinguish bots
+PATH_COLORS = [
+    (255, 0, 0),    # red
+    (0, 255, 0),    # green
+    (0, 128, 255),  # blue
+    (255, 0, 255),  # magenta
+    (255, 165, 0),  # orange
+    (255, 255, 0),  # yellow
+]
 # (Additional colors for item preference highlighting can be defined if needed)
