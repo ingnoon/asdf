@@ -29,6 +29,7 @@ def main() -> None:
     pygame.display.set_caption("Warehouse Simulator")
 
     grid = Grid()
+    grid.populate_random_items()
     bots: List[Bot] = []
     grid.bots = bots  # type: ignore[attr-defined]
     first_cell = _require_cell(grid.get_cell(0, config.INBOUND_CELLS) or grid.get_cell(0, 0))
