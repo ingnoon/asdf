@@ -89,15 +89,9 @@ class Bot:
                     for b in self.grid.bots
                     if b is not self}
         if next_step in occupied:
-            if next_step == self.goal_coords:
-                # 목적지 자체가 막혀 있으면 한 틱 기다리기
-                return
-            else:
-                # 경로 중간이 막히면 즉시 재계산
-                self._compute_path_to(self.goal_coords)
-                if not self.target_path:
-                    return
-                next_step = self.target_path[0]
+            # Replan around the blocking bot and try on next update
+            self._compute_path_to(self.goal_coords)
+            return
         # ----------- END PATCH ------------------------------
         
         
@@ -153,12 +147,13 @@ class Bot:
                 cell = grid.get_cell(self.source_cell.x, self.source_cell.y)
                 if cell:
                     if self.target_item_code:
-                        while cell.items and cell.items[0].code != self.target_item_code:
-                            temp = grid.find_empty_storage_cell({cell})
-                            if temp is None:
+                        picked_item = None
+                        for i, it in enumerate(cell.items):
+                            if it.code == self.target_item_code:
+                                picked_item = cell.items.pop(i)
                                 break
-                            temp.add_item(cell.remove_item())
-                    picked_item = cell.remove_item()
+                    else:
+                        picked_item = cell.remove_item()
                     if picked_item:
                         self.carrying_item = picked_item
                 # Now plan path to destination to drop off
