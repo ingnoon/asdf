@@ -180,7 +180,8 @@ class Car:
                     self.radius = abs(self.x - mid_x)
                     self.start_angle = math.atan2(self.y - self.cy, self.x - self.cx)
                     self.turn_dir = 1 if self.turn == 'left' else -1
-                    self.after_direction = 'E' if self.turn == 'left' else 'W'
+                    # after turning left from north, vehicle heads eastbound
+                    self.after_direction = 'W' if self.turn == 'left' else 'E'
                     self.turning = True
                     self.turn_progress = 0.0
                 
@@ -202,7 +203,8 @@ class Car:
                     self.radius = abs(self.x - mid_x)
                     self.start_angle = math.atan2(self.y - self.cy, self.x - self.cx)
                     self.turn_dir = -1 if self.turn == 'left' else 1
-                    self.after_direction = 'W' if self.turn == 'left' else 'E'
+                    # after turning left from south, vehicle heads westbound
+                    self.after_direction = 'E' if self.turn == 'left' else 'W'
                     self.turning = True
                     self.turn_progress = 0.0
         elif self.direction == 'W':
@@ -223,7 +225,8 @@ class Car:
                     self.radius = abs(self.y - mid_y)
                     self.start_angle = math.atan2(self.y - self.cy, self.x - self.cx)
                     self.turn_dir = 1 if self.turn == 'left' else -1
-                    self.after_direction = 'S' if self.turn == 'left' else 'N'
+                    # from west approach, left turn heads southbound
+                    self.after_direction = 'N' if self.turn == 'left' else 'S'
                     self.turning = True
                     self.turn_progress = 0.0
         else:  # direction == 'E'
@@ -244,7 +247,8 @@ class Car:
                     self.radius = abs(self.y - mid_y)
                     self.start_angle = math.atan2(self.y - self.cy, self.x - self.cx)
                     self.turn_dir = -1 if self.turn == 'left' else 1
-                    self.after_direction = 'N' if self.turn == 'left' else 'S'
+                    # from east approach, left turn heads northbound
+                    self.after_direction = 'S' if self.turn == 'left' else 'N'
                     self.turning = True
                     self.turn_progress = 0.0
 
