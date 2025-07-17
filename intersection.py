@@ -123,6 +123,13 @@ class Car:
         self.passed_stop = False
         self.turned = False
         self.waiting = False
+        self.turning = False
+        self.turn_progress = 0.0
+        self.cx = self.cy = 0
+        self.radius = 0
+        self.start_angle = 0
+        self.turn_dir = 1
+        self.after_direction = direction
         if direction == 'N':
             x = mid_x - offset_v if lane == 1 else mid_x + offset_v
             self.x, self.y = x, -40
@@ -138,6 +145,23 @@ class Car:
 
     def update(self, dt, ns_green, ew_green):
         speed = self.speed * dt / 1000.0
+        if self.turning:
+            arc_len = self.radius * math.pi / 2
+            step = speed / arc_len
+            self.turn_progress += step
+            if self.turn_progress >= 1.0:
+                self.turn_progress = 1.0
+                self.turning = False
+                angle = self.start_angle + self.turn_dir * math.pi / 2
+                self.x = self.cx + self.radius * math.cos(angle)
+                self.y = self.cy + self.radius * math.sin(angle)
+                self.direction = self.after_direction
+                self.turned = True
+            else:
+                angle = self.start_angle + self.turn_dir * math.pi / 2 * self.turn_progress
+                self.x = self.cx + self.radius * math.cos(angle)
+                self.y = self.cy + self.radius * math.sin(angle)
+            return
         if self.direction == 'N':
             stop = stop_n
             if not self.passed_stop:
@@ -148,16 +172,18 @@ class Car:
                 self.y += speed
                 if self.y >= stop:
                     self.passed_stop = True
+                    self.waiting = False
             else:
                 self.y += speed
-                if not self.turned and self.turn == 'left' and self.y >= mid_y:
-                    self.direction = 'E'
-                    self.x = mid_x
-                    self.turned = True
-                elif not self.turned and self.turn == 'right' and self.y >= mid_y:
-                    self.direction = 'W'
-                    self.x = mid_x
-                    self.turned = True
+                if not self.turned and self.turn in ('left', 'right') and self.y >= mid_y:
+                    self.cx, self.cy = mid_x, mid_y
+                    self.radius = abs(self.x - mid_x)
+                    self.start_angle = math.atan2(self.y - self.cy, self.x - self.cx)
+                    self.turn_dir = 1 if self.turn == 'left' else -1
+                    self.after_direction = 'E' if self.turn == 'left' else 'W'
+                    self.turning = True
+                    self.turn_progress = 0.0
+                
         elif self.direction == 'S':
             stop = stop_s
             if not self.passed_stop:
@@ -168,16 +194,17 @@ class Car:
                 self.y -= speed
                 if self.y <= stop:
                     self.passed_stop = True
+                    self.waiting = False
             else:
                 self.y -= speed
-                if not self.turned and self.turn == 'left' and self.y <= mid_y:
-                    self.direction = 'W'
-                    self.x = mid_x
-                    self.turned = True
-                elif not self.turned and self.turn == 'right' and self.y <= mid_y:
-                    self.direction = 'E'
-                    self.x = mid_x
-                    self.turned = True
+                if not self.turned and self.turn in ('left', 'right') and self.y <= mid_y:
+                    self.cx, self.cy = mid_x, mid_y
+                    self.radius = abs(self.x - mid_x)
+                    self.start_angle = math.atan2(self.y - self.cy, self.x - self.cx)
+                    self.turn_dir = -1 if self.turn == 'left' else 1
+                    self.after_direction = 'W' if self.turn == 'left' else 'E'
+                    self.turning = True
+                    self.turn_progress = 0.0
         elif self.direction == 'W':
             stop = stop_w
             if not self.passed_stop:
@@ -188,16 +215,17 @@ class Car:
                 self.x += speed
                 if self.x >= stop:
                     self.passed_stop = True
+                    self.waiting = False
             else:
                 self.x += speed
-                if not self.turned and self.turn == 'left' and self.x >= mid_x:
-                    self.direction = 'S'
-                    self.y = mid_y
-                    self.turned = True
-                elif not self.turned and self.turn == 'right' and self.x >= mid_x:
-                    self.direction = 'N'
-                    self.y = mid_y
-                    self.turned = True
+                if not self.turned and self.turn in ('left', 'right') and self.x >= mid_x:
+                    self.cx, self.cy = mid_x, mid_y
+                    self.radius = abs(self.y - mid_y)
+                    self.start_angle = math.atan2(self.y - self.cy, self.x - self.cx)
+                    self.turn_dir = 1 if self.turn == 'left' else -1
+                    self.after_direction = 'S' if self.turn == 'left' else 'N'
+                    self.turning = True
+                    self.turn_progress = 0.0
         else:  # direction == 'E'
             stop = stop_e
             if not self.passed_stop:
@@ -208,16 +236,17 @@ class Car:
                 self.x -= speed
                 if self.x <= stop:
                     self.passed_stop = True
+                    self.waiting = False
             else:
                 self.x -= speed
-                if not self.turned and self.turn == 'left' and self.x <= mid_x:
-                    self.direction = 'N'
-                    self.y = mid_y
-                    self.turned = True
-                elif not self.turned and self.turn == 'right' and self.x <= mid_x:
-                    self.direction = 'S'
-                    self.y = mid_y
-                    self.turned = True
+                if not self.turned and self.turn in ('left', 'right') and self.x <= mid_x:
+                    self.cx, self.cy = mid_x, mid_y
+                    self.radius = abs(self.y - mid_y)
+                    self.start_angle = math.atan2(self.y - self.cy, self.x - self.cx)
+                    self.turn_dir = -1 if self.turn == 'left' else 1
+                    self.after_direction = 'N' if self.turn == 'left' else 'S'
+                    self.turning = True
+                    self.turn_progress = 0.0
 
     def draw(self):
         rect = pygame.Rect(0, 0, 14, 28)
